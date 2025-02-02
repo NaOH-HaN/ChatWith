@@ -1,0 +1,115 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'Release v*'  # 匹配 Release 格式
+      - 'Pre-Release v*' # 匹配 Pre-Release 格式
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # ...保持原有build步骤不变...
+
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Add Python to PATH
+      run: |
+        echo "Adding Python to PATH"
+        echo "${{ env.pythonLocation }}" >> $GITHUB_PATH
+        echo "${{ env.pythonLocation }}\\Scripts" >> $GITHUB_PATH
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --name ChatWith --distpath dist --workpath build --specpath build src/main.py
+        # 如果使用spec文件
+        # pyinstaller build/ChatWith.spec
+
+    - name: Archive output
+      uses: actions/upload-artifact@v4
+      with:
+        name: ChatWith-Executable
+        path: dist/
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ChatWith-Executable
+        path: dist/
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download build artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ChatWith-Executable
+
+    - name: Parse tag info
+      id: tag-parser
+      run: |
+        TAG_NAME="${GITHUB_REF#refs/tags/}"
+        
+        # 检测是否预发布版本
+        if [[ "$TAG_NAME" == Pre-Release* ]]; then
+          echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          VERSION=${TAG_NAME/Pre-Release /}
+        else
+          echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          VERSION=${TAG_NAME/Release /}
+        fi
+        
+        # 清理版本号中的前缀字符
+        CLEAN_VERSION=$(echo "$VERSION" | sed 's/^v//')
+        echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+        
+        echo "Original Tag: $TAG_NAME"
+        echo "Clean Version: $CLEAN_VERSION"
+        echo "Is Pre-release: ${{ steps.tag-parser.outputs.is_prerelease }}"
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ChatWith ${{ steps.tag-parser.outputs.clean_version }}
+        draft: false
+        prerelease: ${{ steps.tag-parser.outputs.is_prerelease }}
+        body: |
+          **ChatWith ${{ steps.tag-parser.outputs.clean_version }} Release**
+          
+          ### 更新内容
+            - Auto Released.
+          
+          ### 校验值
+          SHA256: ${{ hashFiles('ChatWith-Executable/ChatWith.exe') }}
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./ChatWith-Executable/ChatWith.exe
+        asset_name: ChatWith-${{ steps.tag-parser.outputs.clean_version }}.exe
+        asset_content_type: application/octet-stream
