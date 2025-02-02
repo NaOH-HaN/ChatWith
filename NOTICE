@@ -1,0 +1,10 @@
+ChatWith
+Copyright © 2025 [NaOH_HaN]
+
+This product includes software developed by:
+- Requests (https://github.com/psf/requests)
+  Copyright 2019 Kenneth Reitz
+
+- cryptography (https://github.com/pyca/cryptography)
+  Copyright (c) Individual contributors
+  Licensed under Apache License 2.0 and BSD 3-Clause License
