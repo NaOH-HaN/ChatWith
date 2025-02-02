@@ -1,6 +1,6 @@
-# <center>ChatWith</center>
+# <p align="center">ChatWith</p>
 
-<center>使用您的API Key与Deepseek聊天</center>
+<p align="center">使用您的API Key与Deepseek聊天</p>
 
 ---
 
