@@ -27,11 +27,7 @@ jobs:
 
     - name: Build executable
       run: |
-        pyinstaller --onefile \
-        --name ChatWith \
-        --distpath dist \
-        --workpath build \
-        src/main.py
+        pyinstaller --onefile --name ChatWith --distpath dist --workpath build src/main.py
 
     - name: Verify executable
       run: |
