@@ -1,5 +1,18 @@
+#For security
 api_key.txt
 src/config.json
 
-/.vscode
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+build/
 dist/
+
+
+# IDE
+.vscode/
+.idea/
