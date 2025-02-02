@@ -1,14 +1,6 @@
 #author: NaOH_HaN
 #date: 2025-2-2
 
-'''
-Notes:
-1.EFS Encryption requier Windows Pro or higher version.
-2.Custom password encryption using [AES-256-CBC] encryption
-3.Keys stored in plaintext are saved in [api_key.txt] in the current directory.
-4.Sensitive information stored in encrypted form is stored in [config.json].
-'''
-
 import os
 import json
 import sys
@@ -322,11 +314,12 @@ def handle_about():
     ===========================
     
     ChatWith Client
-    - Version 0.23
+    - Version 0.23.1
     - Copyright © 2025 NaOH_HaN 
     
     本软件依据 Apache License 2.0 协议开源
     Licensed under the Apache License, Version 2.0 (the "License");
+    GitHub: [https://github.com/NaOH-HaN/ChatWith/]
     You may not use this file except in compliance with the License.
     You may obtain a copy of the License at [https://www.apache.org/licenses/LICENSE-2.0].
     """
