@@ -50,6 +50,10 @@ jobs:
         name: ChatWith-Build
         path: release-assets
 
+    - name: Get current time
+      id: get-time
+      run: echo "time=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+
     - name: Parse tag
       id: parse-tag
       env:
@@ -77,8 +81,3 @@ jobs:
         body: |
           ### 自动生成版本
           **构建时间**：$(date -u '+%Y-%m-%d %H:%M:%S UTC')
-
-          **包含文件**：
-          - ChatWith.exe (主程序)
-          - LICENSE (许可证)
-          - NOTICE (声明文件)
