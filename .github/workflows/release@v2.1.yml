@@ -24,17 +24,17 @@ jobs:
       with:
         path: |
           ~\AppData\Local\pip\Cache  # 标准pip缓存路径
-          ~\AppData\Local\pypoetry\Cache  # Poetry缓存
-          venv/  # 虚拟环境目录
-        key: ${{ runner.os }}-py${{ matrix.python-version }}-deps-${{ hashFiles('requirements.txt') }}
+          ~\AppData\Roaming\Python\Python310\site-packages  # 用户级包安装目录
+        key: win-py3.10-${{ hashFiles('requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-py${{ matrix.python-version }}-deps-  #渐进式恢复
+          win-py3.10-
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
+        # 确保缓存目录存在
+        mkdir "%APPDATA%\Python\Python310\site-packages" -Force
+        python -m pip install --user -r requirements.txt
+        python -m pip install --user pyinstaller
 
     - name: Build executable
       run: pyinstaller --onefile --name ChatWith src/main.py
