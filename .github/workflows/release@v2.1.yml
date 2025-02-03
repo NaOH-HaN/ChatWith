@@ -125,8 +125,6 @@ jobs:
         tag_name: ${{ github.ref }}
         name: ChatWith ${{ steps.parse-version.outputs.version }}
         prerelease: ${{ steps.parse-version.outputs.prerelease }}
-        update: true  # 允许更新现有release
-        replace: true  # 替换现有assets
         files: |
           release-package/dist/ChatWith.exe
           release-package/LICENSE
