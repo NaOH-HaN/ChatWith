@@ -5,6 +5,7 @@ on:
     tags:
       - 'Release-v*'
       - 'Pre-Release-v*'
+    branches: [ "dev" ]
 
 jobs:
   build:
