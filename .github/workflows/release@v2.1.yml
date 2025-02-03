@@ -23,19 +23,18 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~\AppData\Local\pip\Cache  # 标准pip缓存路径
-          ~\AppData\Roaming\Python\Python310\site-packages  # 用户级包安装目录
+          $env:LOCALAPPDATA\pip\Cache  # 标准pip缓存路径
         key: ${{ runner.os }}-py3.10-${{ hashFiles('requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-py3.10-
-          ${{ runner.os }}-Python-
+          ${{ runner.os }}-python-
 
     - name: Install dependencies
       run: |
         # 确保缓存目录存在
-        mkdir "%APPDATA%\Python\Python310\site-packages" -Force
-        python -m pip install --user -r requirements.txt
-        python -m pip install --user pyinstaller
+        mkdir -p "$env:LOCALAPPDATA\pip\Cache"
+        python -m pip install -r requirements.txt
+        python -m pip install pyinstaller
 
     - name: Build executable
       run: pyinstaller --onefile --name ChatWith src/main.py
