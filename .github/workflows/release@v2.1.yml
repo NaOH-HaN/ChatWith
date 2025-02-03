@@ -85,12 +85,40 @@ jobs:
         fi
         echo "version=${VERSION/v/}" >> $GITHUB_OUTPUT
 
+    - name: Delete existing release (if exists)
+      env:
+        TAG_NAME: ${{ github.ref_name }}
+      run: |
+        # 获取release ID
+        response=$(curl -sL \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
+  
+        release_id=$(echo "$response" | jq -r '.id')
+        
+        # 如果存在则删除
+        if [ "$release_id" != "null" ]; then
+          echo "Deleting existing release ID: $release_id"
+          curl -sL \
+            -X DELETE \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/$release_id"
+        else
+          echo "No existing release found for tag: $TAG_NAME"
+        fi
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref }}
         name: ChatWith ${{ steps.parse-version.outputs.version }}
         prerelease: ${{ steps.parse-version.outputs.prerelease }}
+        update: true  # 允许更新现有release
+        replace: true  # 替换现有assets
         files: |
           release-package/dist/ChatWith.exe
           release-package/LICENSE
