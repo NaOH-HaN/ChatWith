@@ -1,0 +1,142 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'Release-v*'
+      - 'Pre-Release-v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~\AppData\Local\pip\Cache  # 标准pip缓存路径
+          ~\AppData\Local\pypoetry\Cache  # Poetry缓存
+          venv/  # 虚拟环境目录
+        key: ${{ runner.os }}-py${{ matrix.python-version }}-deps-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-py${{ matrix.python-version }}-deps-  #渐进式恢复
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build executable
+      run: pyinstaller --onefile --name ChatWith src/main.py
+
+    - name: Verify build
+      shell: cmd
+      run: |
+        if not exist dist\ChatWith.exe (
+          echo "::error::Build failed - Executable not found"
+          exit /b 1
+        )
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-output
+        path: |
+          dist/
+          LICENSE
+          NOTICE
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-output
+        path: release-package
+
+    - name: Set build time
+      id: time
+      run: echo "time=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+
+    - name: Parse version
+      id: parse-version
+      run: |
+        TAG=${GITHUB_REF#refs/tags/}
+        if [[ "$TAG" == Pre-Release-* ]]; then
+          VERSION=${TAG/Pre-Release-/}
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+        else
+          VERSION=${TAG/Release-/}
+          echo "prerelease=false" >> $GITHUB_OUTPUT
+        fi
+        echo "version=${VERSION/v/}" >> $GITHUB_OUTPUT
+
+    - name: Calculate SHA256
+      id: sha-calc
+      run: |
+        cd release-package/dist
+        sha=$(sha256sum ChatWith.exe | cut -d' ' -f1)
+        echo "sha256=$sha" >> $GITHUB_OUTPUT
+
+    - name: Delete existing release (if exists)
+      env:
+        TAG_NAME: ${{ github.ref_name }}
+      run: |
+        # 获取release ID
+        response=$(curl -sL \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
+  
+        release_id=$(echo "$response" | jq -r '.id')
+        
+        # 如果存在则删除
+        if [ "$release_id" != "null" ]; then
+          echo "Deleting existing release ID: $release_id"
+          curl -sL \
+            -X DELETE \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/$release_id"
+        else
+          echo "No existing release found for tag: $TAG_NAME"
+        fi
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref }}
+        name: ChatWith ${{ steps.parse-version.outputs.version }}
+        prerelease: ${{ steps.parse-version.outputs.prerelease }}
+        update: true  # 允许更新现有release
+        replace: true  # 替换现有assets
+        files: |
+          release-package/dist/ChatWith.exe
+          release-package/LICENSE
+          release-package/NOTICE
+        body: |
+          ### 版本信息
+          **构建时间**: ${{ steps.time.outputs.time }}
+          **版本号**: ${{ steps.parse-version.outputs.version }}
+          
+          **文件校验**:
+          ```
+          SHA256: ${{ steps.sha-calc.outputs.sha256 }}
+          ```
