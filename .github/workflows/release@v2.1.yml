@@ -23,11 +23,12 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~\AppData\Local\pip\Cache
-          venv/
-        key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt') }}
+          ~\AppData\Local\pip\Cache  # 标准pip缓存路径
+          ~\AppData\Local\pypoetry\Cache  # Poetry缓存
+          venv/  # 虚拟环境目录
+        key: ${{ runner.os }}-py${{ matrix.python-version }}-deps-${{ hashFiles('requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-python-
+          ${{ runner.os }}-py${{ matrix.python-version }}-deps-  #渐进式恢复
 
     - name: Install dependencies
       run: |
@@ -85,6 +86,13 @@ jobs:
         fi
         echo "version=${VERSION/v/}" >> $GITHUB_OUTPUT
 
+    - name: Calculate SHA256
+      id: sha-calc
+      run: |
+        cd release-package/dist
+        sha=$(sha256sum ChatWith.exe | cut -d' ' -f1)
+        echo "sha256=$sha" >> $GITHUB_OUTPUT
+
     - name: Delete existing release (if exists)
       env:
         TAG_NAME: ${{ github.ref_name }}
@@ -126,8 +134,9 @@ jobs:
         body: |
           ### 版本信息
           **构建时间**: ${{ steps.time.outputs.time }}
+          **版本号**: ${{ steps.parse-version.outputs.version }}
           
           **文件校验**:
           ```
-          SHA256: $(sha256sum release-package/dist/ChatWith.exe | cut -d' ' -f1)
+          SHA256: ${{ steps.sha-calc.outputs.sha256 }}
           ```
