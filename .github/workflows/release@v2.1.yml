@@ -25,9 +25,6 @@ jobs:
         path: |
           $env:LOCALAPPDATA\pip\Cache  # 标准pip缓存路径
         key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-py3.10-
-          ${{ runner.os }}-python-
 
     - name: Install dependencies
       run: |
