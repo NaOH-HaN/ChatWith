@@ -26,6 +26,8 @@ jobs:
           ~\AppData\Local\pip\Cache
           venv/
         key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-python-
 
     - name: Install dependencies
       run: |
@@ -37,10 +39,11 @@ jobs:
       run: pyinstaller --onefile --name ChatWith src/main.py
 
     - name: Verify build
+      shell: cmd
       run: |
         if not exist dist\ChatWith.exe (
-          echo "::error::Build failed"
-          exit 1
+          echo "::error::Build failed - Executable not found"
+          exit /b 1
         )
 
     - name: Upload artifacts
@@ -73,13 +76,14 @@ jobs:
       id: parse-version
       run: |
         TAG=${GITHUB_REF#refs/tags/}
-        VERSION=${TAG/*-/}
-        echo "version=${VERSION/v/}" >> $GITHUB_OUTPUT
-        if [[ "$TAG" == Pre-Release* ]]; then
+        if [[ "$TAG" == Pre-Release-* ]]; then
+          VERSION=${TAG/Pre-Release-/}
           echo "prerelease=true" >> $GITHUB_OUTPUT
         else
+          VERSION=${TAG/Release-/}
           echo "prerelease=false" >> $GITHUB_OUTPUT
         fi
+        echo "version=${VERSION/v/}" >> $GITHUB_OUTPUT
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
@@ -92,12 +96,10 @@ jobs:
           release-package/LICENSE
           release-package/NOTICE
         body: |
-          **版本信息**
-          - 版本号：${{ steps.parse-version.outputs.version }}
-          - 构建时间：${{ steps.time.outputs.time }}
+          ### 版本信息
+          **构建时间**: ${{ steps.time.outputs.time }}
           
-          **文件校验**
-          ```sh
-          sha256sum ChatWith.exe
-          $(sha256sum release-package/dist/ChatWith.exe | cut -d' ' -f1)
+          **文件校验**:
+          ```
+          SHA256: $(sha256sum release-package/dist/ChatWith.exe | cut -d' ' -f1)
           ```
